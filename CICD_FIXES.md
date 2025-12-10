@@ -48,6 +48,58 @@ which version is compatible with other requirements. This could take a while.
 
 ---
 
+### Issue 3: protobuf Version Conflict
+
+**Error Message**:
+```
+ERROR: Cannot install -r requirements.txt (line 14) and -r requirements.txt (line 15) because these package versions have conflicting dependencies.
+
+The conflict is caused by:
+    grpcio-status 1.68.1 depends on protobuf<6.0dev and >=5.26.1
+    google-cloud-monitoring 2.22.0 depends on protobuf!=3.20.0, !=3.20.1, !=4.21.0, !=4.21.1, !=4.21.2, !=4.21.3, !=4.21.4, !=4.21.5, <5.0.0dev and >=3.19.5
+```
+
+**Root Cause**:
+- grpcio-status 1.68.1 requires protobuf >=5.26.1 (5.x series)
+- google-cloud-monitoring 2.22.0 requires protobuf <5.0.0 (4.x series)
+- Incompatible protobuf version requirements
+
+**Fix**: Downgraded grpcio and grpcio-status to versions compatible with protobuf 4.x
+- grpcio: 1.68.1 → 1.62.3
+- grpcio-status: 1.68.1 → 1.62.3
+
+**Commit**: `383b2ac` - "fix: downgrade grpcio and grpcio-status to resolve protobuf conflicts"
+
+---
+
+### Issue 4: grpcio Compilation Missing C++ Compiler
+
+**Error Message**:
+```
+FileNotFoundError: [Errno 2] No such file or directory: 'c++'
+ERROR: Failed to build 'grpcio' when getting requirements to build wheel
+```
+
+**Root Cause**:
+- grpcio 1.62.3 needs to be compiled from source during pip install
+- Compilation requires C++ compiler (g++)
+- Dockerfile only installed gcc (C compiler), not g++ (C++ compiler)
+- Docker build fails when trying to compile grpcio
+
+**Fix**: Added g++ to Dockerfile system dependencies
+```dockerfile
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    libpq-dev \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+**Commit**: (pending) - "fix: add g++ compiler for grpcio compilation"
+
+---
+
 ## 📊 Current Status
 
 ### ✅ What Should Work Now
@@ -226,9 +278,11 @@ pip install -r requirements.txt
 | 2025-12-10 | 1.0 | Initial CI/CD setup | `a752cea` |
 | 2025-12-10 | 1.1 | Python 3.13 compatibility fix | `50188ca` |
 | 2025-12-10 | 1.2 | grpcio-status conflict fix | `baf4d37` |
+| 2025-12-10 | 1.3 | protobuf conflict fix | `383b2ac` |
+| 2025-12-10 | 1.4 | Add g++ compiler for grpcio | (pending) |
 
 ---
 
 **Last Updated**: 2025-12-10
-**Status**: ✅ CI Workflows Working
-**Deploy Status**: ⏭️ Waiting for Cloud SQL Setup
+**Status**: 🔧 Fixing Docker Build (Adding C++ Compiler)
+**Deploy Status**: ⏭️ Waiting for Successful CI Build
