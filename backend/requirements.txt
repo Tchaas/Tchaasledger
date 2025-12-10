@@ -10,7 +10,7 @@ SQLAlchemy==2.0.45
 
 # Monitoring
 prometheus-client==0.21.0
-google-cloud-monitoring==2.23.1
+google-cloud-monitoring==2.22.0
 
 # Environment & Configuration
 python-dotenv==1.0.1
