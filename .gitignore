@@ -37,6 +37,10 @@ dist-ssr/
 .env.local
 .env.*.local
 
+# GCP Service Account Keys (NEVER COMMIT!)
+*-key.json
+github-actions-key.json
+
 # IDE
 .vscode/
 .idea/
