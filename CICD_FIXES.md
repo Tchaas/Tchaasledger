@@ -96,7 +96,31 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 ```
 
-**Commit**: (pending) - "fix: add g++ compiler for grpcio compilation"
+**Initial Commit**: `705eea3` - "fix: add g++ compiler for grpcio compilation"
+
+**Additional Error**: Both psycopg2-binary and grpcio still failed to build wheels
+```
+ERROR: Failed building wheel for grpcio
+Failed to build psycopg2-binary grpcio
+```
+
+**Root Cause**:
+- Missing `make` utility required for build process
+- Missing `python3-dev` package with Python header files needed for C extensions
+
+**Complete Fix**: Added make and python3-dev to Dockerfile
+```dockerfile
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    libpq-dev \
+    gcc \
+    g++ \
+    make \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+**Commit**: (pending) - "fix: add make and python3-dev for building wheels"
 
 ---
 
