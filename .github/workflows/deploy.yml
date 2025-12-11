@@ -19,6 +19,7 @@ env:
   GCP_REGION: us-central1
   BACKEND_SERVICE_NAME: tchaas-ledger-api
   FRONTEND_BUCKET: tchaas-ledger-frontend
+  ARTIFACT_REGISTRY_REPO: docker-images
 
 jobs:
   deploy-backend:
@@ -38,28 +39,29 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
-    - name: Configure Docker for GCP
-      run: gcloud auth configure-docker
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
     - name: Build Docker image
       working-directory: ./backend
       run: |
-        docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} .
-        docker tag gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} \
-                   gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:latest
+        docker build -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} .
+        docker tag ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} \
+                   ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_SERVICE_NAME }}:latest
 
-    - name: Push Docker image to GCR
+    - name: Push Docker image to Artifact Registry
       run: |
-        docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}
-        docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:latest
+        docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}
+        docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_SERVICE_NAME }}:latest
 
     - name: Run database migrations
       run: |
         gcloud run jobs create migration-${{ github.sha }} \
-          --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} \
+          --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} \
           --region ${{ env.GCP_REGION }} \
-          --set-env-vars DATABASE_URL=${{ secrets.DATABASE_URL }} \
+          --set-secrets "DATABASE_URL=DATABASE_URL:latest" \
           --set-env-vars FLASK_APP=run.py \
+          --add-cloudsql-instances ${{ secrets.CLOUD_SQL_INSTANCE }} \
           --command flask \
           --args db,upgrade || echo "Migration job creation failed, may already exist"
 
@@ -68,7 +70,7 @@ jobs:
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy ${{ env.BACKEND_SERVICE_NAME }} \
-          --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} \
+          --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }} \
           --platform managed \
           --region ${{ env.GCP_REGION }} \
           --allow-unauthenticated \
