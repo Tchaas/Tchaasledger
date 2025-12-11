@@ -61,7 +61,7 @@ jobs:
           --region ${{ env.GCP_REGION }} \
           --set-secrets "DATABASE_URL=DATABASE_URL:latest" \
           --set-env-vars FLASK_APP=run.py \
-          --add-cloudsql-instances ${{ secrets.CLOUD_SQL_INSTANCE }} \
+          --set-cloudsql-instances ${{ secrets.CLOUD_SQL_INSTANCE }} \
           --command flask \
           --args db,upgrade || echo "Migration job creation failed, may already exist"
 
