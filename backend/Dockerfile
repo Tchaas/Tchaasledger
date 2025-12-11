@@ -1,5 +1,5 @@
-# Use Python 3.13 slim image
-FROM python:3.13-slim
+# Use Python 3.11 slim image (better package compatibility)
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     make \
     python3-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -34,9 +35,9 @@ EXPOSE 5000
 ENV FLASK_APP=run.py
 ENV PYTHONUNBUFFERED=1
 
-# Health check
+# Health check (using curl instead of requests)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD python -c "import requests; requests.get('http://localhost:5000/health')" || exit 1
+  CMD curl -f http://localhost:5000/health || exit 1
 
 # Run the application
 CMD ["python", "run.py"]
