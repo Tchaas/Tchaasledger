@@ -20,6 +20,29 @@ class User(db.Model):
     # Relationships
     organization = db.relationship('Organization', back_populates='users')
 
+    def set_password(self, password):
+        """
+        Set user password (hashes it automatically).
+
+        Args:
+            password: Plain text password
+        """
+        from app.auth.utils import hash_password
+        self.password_hash = hash_password(password)
+
+    def check_password(self, password):
+        """
+        Verify password against stored hash.
+
+        Args:
+            password: Plain text password to verify
+
+        Returns:
+            Boolean indicating if password matches
+        """
+        from app.auth.utils import check_password
+        return check_password(self.password_hash, password)
+
     def to_dict(self):
         return {
             'id': self.id,

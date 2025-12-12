@@ -36,6 +36,10 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     CORS(app, origins=app.config['CORS_ORIGINS'])
 
+    # Initialize authentication
+    from app.auth import init_auth
+    init_auth(app)
+
     # Initialize monitoring if enabled
     if app.config.get('ENABLE_MONITORING', True):
         try:

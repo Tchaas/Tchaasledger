@@ -62,3 +62,53 @@ def session(_db):
     transaction.rollback()
     connection.close()
     session.remove()
+
+
+@pytest.fixture
+def test_org(session):
+    """Create a test organization."""
+    from app.models import Organization
+
+    org = Organization(
+        name='Test Organization',
+        ein='12-3456789',
+        address='123 Test St',
+        city='Test City',
+        state='CA',
+        zip_code='12345'
+    )
+    session.add(org)
+    session.commit()
+    return org
+
+
+@pytest.fixture
+def test_user(session, test_org):
+    """Create a test user."""
+    from app.models import User
+    from app.auth.utils import hash_password
+
+    user = User(
+        email='test@example.com',
+        name='Test User',
+        password_hash=hash_password('TestPass123'),
+        organization_id=test_org.id
+    )
+    session.add(user)
+    session.commit()
+    return user
+
+
+@pytest.fixture
+def auth_tokens(client, test_user):
+    """Generate authentication tokens for test user."""
+    response = client.post('/api/auth/login', json={
+        'email': test_user.email,
+        'password': 'TestPass123'
+    })
+
+    data = response.get_json()
+    return {
+        'access_token': data['access_token'],
+        'refresh_token': data['refresh_token']
+    }
