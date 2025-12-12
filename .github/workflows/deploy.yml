@@ -26,6 +26,8 @@ jobs:
     name: Deploy Backend to Cloud Run
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    outputs:
+      backend_url: ${{ steps.deploy.outputs.url }}
 
     steps:
     - name: Checkout code
@@ -116,17 +118,15 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
 
     - name: Install dependencies
       working-directory: ./frontend
-      run: npm ci
+      run: npm install
 
     - name: Build production bundle
       working-directory: ./frontend
       env:
-        VITE_API_URL: ${{ secrets.BACKEND_API_URL }}
+        VITE_API_URL: ${{ needs.deploy-backend.outputs.backend_url }}
       run: npm run build
 
     - name: Authenticate to Google Cloud
@@ -140,7 +140,7 @@ jobs:
     - name: Deploy to Cloud Storage
       working-directory: ./frontend
       run: |
-        gsutil -m rsync -r -d dist/ gs://${{ env.FRONTEND_BUCKET }}/
+        gsutil -m rsync -r -d build/ gs://${{ env.FRONTEND_BUCKET }}/
         gsutil -m setmeta -h "Cache-Control:public, max-age=31536000" gs://${{ env.FRONTEND_BUCKET }}/**/*.js
         gsutil -m setmeta -h "Cache-Control:public, max-age=31536000" gs://${{ env.FRONTEND_BUCKET }}/**/*.css
         gsutil -m setmeta -h "Cache-Control:no-cache" gs://${{ env.FRONTEND_BUCKET }}/index.html
